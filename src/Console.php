@@ -1,4 +1,34 @@
 <?php
+/*
+gutils Console
+Licensed under the New BSD License, as follows:
+
+Copyright (c) 2011, Greg Neustaetter
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the <organization> nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 class Console {
 	
 	protected $mode;
@@ -9,12 +39,13 @@ class Console {
 	public function __construct($shortopts = NULL, array $longopts = array(), $defaults = array()) {
 		$this->mode = (php_sapi_name() == 'cli' && empty($_SERVER['REMOTE_ADDR'])) ? 'cli' : 'browser';
 		if($this->mode != 'cli') {
-			echo '<pre>';
+			echo '<html><head><title>Script Output</title></head><body><pre>';
 		}
+		echo 'mode set';
 		$this->lastLog = microtime(true);
 		$this->timerStart('__scriptbegin__');
 		$longopts[] = 'help::';
-		$options = ($this->mode == 'cli') ? getopt($shortopts,$longopts) : array();
+		$options = ($this->mode == 'cli') ? getopt($shortopts,$longopts) : $_GET;
 		$this->args = array_merge($defaults, $options);
 		if($this->isArgSet('help')) {
 			$this->showHelp();
@@ -88,10 +119,10 @@ class Console {
 	public function end($showDuration = true) {
 		$duration = $this->timerStop('__scriptbegin__');
 		if($showDuration) {
-			$this->log("Completed in $duration seconds");
+			$this->log("Completed in {$duration} seconds");
 		}
 		if(!$this->isCLI()) {
-			echo '</pre>';
+			echo '</pre></body></html>';
 		}
 	}
 }
