@@ -41,7 +41,6 @@ class Console {
 		if($this->mode != 'cli') {
 			echo '<html><head><title>Script Output</title></head><body><pre>';
 		}
-		echo 'mode set';
 		$this->lastLog = microtime(true);
 		$this->timerStart('__scriptbegin__');
 		$longopts[] = 'help::';
