@@ -1,32 +1,19 @@
 <?php
 /*
-gutils Console
-Licensed under the New BSD License, as follows:
+   gutils Console
+   Copyright 2011 Greg Neustaetter
 
-Copyright (c) 2011, Greg Neustaetter
-All rights reserved.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the <organization> nor the
-      names of its contributors may be used to endorse or promote products
-      derived from this software without specific prior written permission.
+       http://www.apache.org/licenses/LICENSE-2.0
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 */
 
 class Console {
@@ -34,44 +21,143 @@ class Console {
 	protected $mode;
 	protected $lastLog;
 	protected $timers = array();
+	protected $mainHelpText = '';
+	protected $argDefs = array();
 	public $args = array();
+	
+	const OPTIONAL_VALUE = '::';
+	const REQUIRED_VALUE = ':';
+	const NO_VALUE = '';
 
-	public function __construct($shortopts = NULL, array $longopts = array(), $defaults = array()) {
+	public function __construct(array $argDefs = array(), $helpText = '') {
 		$this->mode = (php_sapi_name() == 'cli' && empty($_SERVER['REMOTE_ADDR'])) ? 'cli' : 'browser';
 		if($this->mode != 'cli') {
 			echo '<html><head><title>Script Output</title></head><body><pre>';
 		}
 		$this->lastLog = microtime(true);
 		$this->timerStart('__scriptbegin__');
-		$longopts[] = 'help::';
-		$options = ($this->mode == 'cli') ? getopt($shortopts,$longopts) : $_GET;
-		$this->args = array_merge($defaults, $options);
-		if($this->isArgSet('help')) {
-			$this->showHelp();
-			$this->end(false);
-		}
+		$argDefs[] = array(
+			'name' => 'help',
+			'type' => Console::NO_VALUE,
+			'help' => "Shows help for this script"
+		);
+		$this->mainHelpText = $helpText;
+		$this->args = $this->parseArgs($argDefs);
 	}
 
 	public function isCLI() {
 		return $this->mode == 'cli';
 	}
 
+	protected function parseArgs($argDefs) {
+		$args = array();
+		$shortArgs = '';
+		$longArgs = array();
+		$defaults = array(
+			'name' => NULL,
+			'default' => NULL,
+			'forceLong' => false,
+			'type' => Console::OPTIONAL_VALUE,
+			'help' => 'No help available',
+			'possibleValues' => NULL,
+			'validator' => NULL,
+			'validationMsg' => NULL
+		);
+		foreach($argDefs as $arg) {
+			$arg = array_merge($defaults, $arg);
+			$getOptName = $arg['name'] . $arg['type'];
+			if((strlen($arg['name']) == 1) && !$arg['forceLong']) {
+				$shortArgs .= $getOptName;
+				$arg['short'] = true;
+			} else {
+				$longArgs[] = $getOptName;
+				$arg['short'] = false;
+			}
+			$args[$arg['name']] = $arg;
+		}
+		$this->argDefs = $args;
+		$vals = ($this->isCLI()) ? getopt($shortArgs,$longArgs) : $_GET;
+		if(array_key_exists('help',$vals)) {
+			$this->showHelp();
+			exit;
+		}
+		foreach($args as $arg) {
+			$name = $arg['name'];
+			if(!array_key_exists($name,$vals)) {
+				if($arg['type'] == Console::REQUIRED_VALUE) {
+					$this->log("Option {$this->getPrefixedArgName($name)} is required", false);
+					exit;
+				}
+				if(isset($arg['default'])) {
+					$vals[$name] = $arg['default'];
+				}
+			}
+			if(array_key_exists($name,$vals)) {
+				if($arg['type'] == Console::NO_VALUE) {
+					$vals[$name] = true;
+				}
+				if(isset($arg['possibleValues'])) {
+					if(!in_array($vals[$name], $arg['possibleValues'])) {
+						$possibleVals = implode(', ',$arg['possibleValues']);
+						$this->log("Option {$this->getPrefixedArgName($name)} must be one of the following values: $possibleVals", false);
+						exit;
+					}
+				}
+				if(isset($arg['validator'])) {
+					if(!call_user_func($arg['validator'], $vals[$name])) {
+						$this->log("Option {$this->getPrefixedArgName($name)} failed validation: {$arg['validationMsg']}", false);
+						exit;
+					}
+				}
+			}
+		}
+		return $vals;
+	}
+
 	public function showHelp() {
-		if(file_exists('readme.txt')) {
-			$this->log(file_get_contents('readme.txt'), false);
-		} else {
-			$this->log('No help is available for this script');
+		$this->log("\nSUMMARY", false);
+		$this->log("   " . $this->mainHelpText, false);
+		if(count($this->argDefs) > 1) {
+			$this->log("\nOPTIONS", false);
+			foreach($this->argDefs as $arg) {
+				$prefix = ($arg['short']) ? '-' : '--';
+				switch($arg['type']) {
+					case Console::NO_VALUE:
+						$suffix = ' [OPTIONAL]';
+						break;
+					case Console::REQUIRED_VALUE:
+						$suffix = ' value [REQUIRED]';
+						break;
+					case Console::OPTIONAL_VALUE:
+						$suffix = ' value [OPTIONAL]';
+						break;
+				}
+				$this->log("   {$prefix}{$arg['name']}{$suffix}", false);
+				$this->log("       {$arg['help']}\n", false);
+			}
 		}
 	}
 
 	public function getArg($name) {
 		if($this->isArgSet($name)) {
-			if(is_string($this->args[$name])) {
-				return $this->args[$name];
-			}
-			return true;
+			return $this->args[$name];
 		}
 		return false;
+	}
+
+	protected function getArgDefByName($name) {
+		foreach($this->argDefs as $argDef) {
+			if($argDef['name'] == $name) {
+				return $argDef;
+			}
+		}
+		throw new Exception("No option with name {$name} exists");
+	}
+
+	protected function getPrefixedArgName($name) {
+		$arg = $this->getArgDefByName($name);
+		$prefix = ($arg['short']) ? '-' : '--';
+		return $prefix . $name;
 	}
 
 	public function isArgSet($name) {
@@ -91,7 +177,6 @@ class Console {
 			echo htmlentities($msg,ENT_QUOTES) . "\n";
 			flush();
 		}
-		
 	}
 
 	public function generateReport($data, $template, $location) {
@@ -116,7 +201,7 @@ class Console {
 	}
 
 	public function end($showDuration = true) {
-		$duration = $this->timerStop('__scriptbegin__');
+		$duration = number_format($this->timerStop('__scriptbegin__'),4);
 		if($showDuration) {
 			$this->log("Completed in {$duration} seconds");
 		}
