@@ -59,6 +59,7 @@ class Console {
 			'forceLong' => false,
 			'type' => Console::OPTIONAL_VALUE,
 			'help' => 'No help available',
+			'required' => false,
 			'possibleValues' => NULL,
 			'validator' => NULL,
 			'validationMsg' => NULL
@@ -84,7 +85,7 @@ class Console {
 		foreach($args as $arg) {
 			$name = $arg['name'];
 			if(!array_key_exists($name,$vals)) {
-				if($arg['type'] == Console::REQUIRED_VALUE) {
+				if($arg['required']) {
 					$this->log("Option {$this->getPrefixedArgName($name)} is required", false);
 					exit;
 				}
@@ -93,7 +94,7 @@ class Console {
 				}
 			}
 			if(array_key_exists($name,$vals)) {
-				if($arg['type'] == Console::NO_VALUE) {
+				if(in_array($arg['type'],array(Console::NO_VALUE, Console::OPTIONAL_VALUE)) && ($vals[$name] === false)) {
 					$vals[$name] = true;
 				}
 				if(isset($arg['possibleValues'])) {
