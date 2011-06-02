@@ -95,7 +95,9 @@ class Console {
 			}
 			if(array_key_exists($name,$vals)) {
 				if(in_array($arg['type'],array(Console::NO_VALUE, Console::OPTIONAL_VALUE)) && ($vals[$name] === false)) {
-					$vals[$name] = true;
+					$vals[$name] = 1;
+				} elseif(($arg['type'] == Console::NO_VALUE) && is_array($vals[$name])) {
+					$vals[$name] = count($vals[$name]);
 				}
 				if(isset($arg['possibleValues'])) {
 					if(!in_array($vals[$name], $arg['possibleValues'])) {
@@ -122,15 +124,16 @@ class Console {
 			$this->log("\nOPTIONS", false);
 			foreach($this->argDefs as $arg) {
 				$prefix = ($arg['short']) ? '-' : '--';
+				$required = ($arg['required']) ? " [REQUIRED]" : " [OPTIONAL]";
 				switch($arg['type']) {
 					case Console::NO_VALUE:
-						$suffix = ' [OPTIONAL]';
+						$suffix = $required;
 						break;
 					case Console::REQUIRED_VALUE:
-						$suffix = ' value [REQUIRED]';
+						$suffix = ' value' . $required;
 						break;
 					case Console::OPTIONAL_VALUE:
-						$suffix = ' value [OPTIONAL]';
+						$suffix = '=optional_value' . $required;
 						break;
 				}
 				$this->log("   {$prefix}{$arg['name']}{$suffix}", false);
