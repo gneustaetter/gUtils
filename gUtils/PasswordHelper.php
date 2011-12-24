@@ -1,4 +1,6 @@
 <?php
+namespace gUtils;
+
 /*
    gutils PasswordHelper
    Copyright 2011 Greg Neustaetter
@@ -22,12 +24,12 @@ class PasswordHelper {
 
 	public function generateHash($password,$cost=10) {
 		if(CRYPT_BLOWFISH != 1) {
-			throw new Exception('This version of PHP does not support Blowfish hashing.  Try PHP version 5.3 or greater');
+			throw new \Exception('This version of PHP does not support Blowfish hashing.  Try PHP version 5.3 or greater');
 		}
 		$salt = $this->generateBlowfishSalt($cost);
 		$hashed = crypt($password, $salt);
 		if(in_array($hashed, $this->badHashes)) {
-			throw new Exception('Password hashing failed with value: ' . $hashed);
+			throw new \Exception('Password hashing failed with value: ' . $hashed);
 		} else {
 			return $hashed;
 		}
@@ -48,7 +50,7 @@ class PasswordHelper {
 
 	public function generateBlowfishSalt($cost=10) {
 		if(($cost < 4) || ($cost > 31)) {
-			throw new Exception('Cost must be an integer in the range 4-31');
+			throw new \Exception('Cost must be an integer in the range 4-31');
 		}
 		$salt = '$2a$';
 		$salt .= ($cost < 10) ? '0' : '';

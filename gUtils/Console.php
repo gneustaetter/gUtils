@@ -1,4 +1,6 @@
 <?php
+namespace gUtils;
+
 /*
    gutils Console
    Copyright 2011 Greg Neustaetter
@@ -155,7 +157,7 @@ class Console {
 				return $argDef;
 			}
 		}
-		throw new Exception("No option with name {$name} exists");
+		throw new \Exception("No option with name {$name} exists");
 	}
 
 	protected function getPrefixedArgName($name) {

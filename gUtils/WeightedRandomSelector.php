@@ -1,4 +1,5 @@
 <?php
+namespace gUtils;
 /*
    gutils WeightedRandomSelector
    Copyright 2011 Greg Neustaetter
@@ -32,7 +33,7 @@ class WeightedRandomSelector {
 		$this->items[] = $item;
 		$weight = ($weight) ? $weight : $this->defaultWeight;
 		if(!is_int($weight) || $weight < 1) {
-			throw new Exception("Weight must be a positive integer");
+			throw new \Exception("Weight must be a positive integer");
 		}
 		$this->totalWeight += $weight;
 		$this->weights[] = $weight;
@@ -40,7 +41,7 @@ class WeightedRandomSelector {
 
 	public function addItems($items) {
 		if(!is_array($items) || count($items) < 1) {
-			throw new Exception("Items must be an array of items");
+			throw new \Exception("Items must be an array of items");
 		}
 		foreach($items as $item) {
 			if(!is_array($item)) {
@@ -48,14 +49,14 @@ class WeightedRandomSelector {
 			} elseif(is_array($item) && count($item) == 2) {
 				$this->addItem($item[0],$item[1]);
 			} else {
-				throw new Exception("Each item must either be a string or an array with two elements, the value and the weight");
+				throw new \Exception("Each item must either be a string or an array with two elements, the value and the weight");
 			}
 		}
 	}
 
 	public function get() {
 		if($this->totalWeight == 0) {
-			throw new Exception("You must add items before trying to get a value");
+			throw new \Exception("You must add items before trying to get a value");
 		}
 		$rand = mt_rand(1,$this->totalWeight);
 		foreach($this->weights as $key=>$weight) {
@@ -68,7 +69,7 @@ class WeightedRandomSelector {
 
 	public function getMulti($count) {
 		if(!is_int($count) || $count < 1) {
-			throw new Exception("Count must be a positive integer");
+			throw new \Exception("Count must be a positive integer");
 		}
 		$results = array();
 		for($i=0;$i<$count;$i++) {
