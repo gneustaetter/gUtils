@@ -66,7 +66,8 @@ class InputValidator {
         'afterField' => '%s is before %s',
         'beforeField' => '%s is after %s',
         'before' => '%s cannot be after %s',
-        'after' => '%s cannot be before %s'
+        'after' => '%s cannot be before %s',
+        'noControlChars' => '%s does not allow new lines, tabs, or other control characters'
     );
 
     public function __construct($inputArray=array(), $trimAll=true) {
@@ -320,6 +321,18 @@ class InputValidator {
         }
         return $this;
     }
+
+    public function noControlChars($errorMsg=null) {
+        if(!$this->shouldSkipValidation()) {
+            $valStripped = filter_var($this->val(),FILTER_UNSAFE_RAW,FILTER_FLAG_STRIP_LOW);
+            var_dump($valStripped);
+            if($valStripped !== $this->val()) {
+                $this->setErrorMsg($errorMsg,$this->errorMessages['noControlChars']);
+            }
+        }
+        return $this;
+    }
+
 
     public function email($errorMsg=null) {
         $this->filterVarHelper(FILTER_VALIDATE_EMAIL, array(), null, 'notValid', $errorMsg);
