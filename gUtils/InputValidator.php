@@ -28,6 +28,7 @@ class InputValidator {
     protected $fields = array();
     protected $currentField;
     protected $trimAll = true;
+    protected $formErrors = array();
     public $dynamicValidators = array(
         'alpha' => array(
             'type' => 'regex',
@@ -101,6 +102,14 @@ class InputValidator {
         return $res;
     }
 
+    public function getSpecificValues($fieldsArray, $filtered=true) {
+        $res = array();
+        foreach($fieldsArray as $field) {
+            $res[$field] = $this->fields[$field]->getValue($filtered);
+        }
+        return $res;
+    }
+
     public function val($filtered=true) {
         return $this->getCurrent()->getValue($filtered);
     }
@@ -135,6 +144,9 @@ class InputValidator {
                 $res[$name] = $obj->getError();
             }
         }
+        foreach($this->formErrors as $error) {
+            $res['__form__'][] = $error;
+        }
         return $res;
     }
 
@@ -153,6 +165,11 @@ class InputValidator {
            $field->setError(vsprintf($default, $vars));
        }
 	}
+
+    protected function setFormErrorMsg($errorMsg) {
+        $this->allValid = false;
+        $this->formErrors[] = $errorMsg;
+    }
 
     // Validation doesn't need to be performed because the field is already invalid or it is a non-required empty field
     protected function shouldSkipValidation() {
@@ -234,6 +251,7 @@ class InputValidator {
        $this->isValid = $this->currentField->isValid();
        return $this;
 	}
+
 
 /*
 * FILTERS TO MANIPULATE CURRENT FIELD
@@ -461,6 +479,35 @@ class InputValidator {
         }
         return $this;      
     }
+
+/*
+* Full form validators
+*/ 
+
+
+    public function formFunc($func, $errorMsg) {
+        if(call_user_func($func, $this->getValues()) === false) {
+            $this->setFormErrorMsg($errorMsg);
+        }
+        return $this;
+    }
+
+    public function formAnyFunc($fieldsList, $func, $errorMsg) {
+        $values = (is_array($fieldsList)) ? $this->getSpecificValues($fieldsList) : $this->getValues();
+        foreach($values as $value) {
+            if(call_user_func($func, $value) === true) {
+                return $this;
+            }
+        }
+        $this->setFormErrorMsg($errorMsg);
+    }
+
+    public function formAnyVal($fieldsList, $val, $errorMsg) {
+        $this->formAnyFunc($fieldsList, function($value) use ($val) {
+            return $value == $val;
+        },$errorMsg);
+    }
+
 }
 
 class InputValidatorField {
