@@ -5,6 +5,7 @@ A collection of standalone utilities for PHP developemnt.  These classes are nam
 
 * Console - utilities for command line scripitng with PHP
 * InputValidator - input validation library using a fluent interface
+* ObservableTrait - a PHP 5.4+ trait for firing events and notifying listeners
 * PasswordHelper - bcrypt password creation, comparison, and password strength validation
 * RecursiveFileExtensionFilteredIterator - find all of the files with a specific extension in a file tree
 * WeightedRandomSelector - get psuedo random values based on weights associated to a list of items
@@ -46,7 +47,7 @@ $console->end();
 An input validation and and transformation library using a fluent interface to reduce the amount of code needed to perform validation. [Read the documentation](https://github.com/gneustaetter/gUtils/wiki/InputValidator-Documentation)
 
 ```php
-<?
+<?php
 require('gUtils/InputValidator.php');
 // this could be from $_POST
 $data = array(
@@ -76,6 +77,51 @@ if(!$v->allValid()) {
 $data = $v->getValues();  // returns an array of values indexed by field
 $name = $v->get('name'); // get the value of name
 echo $v->escape('name'); // escape the value of name for output with htmlspecialchars
+```
+
+##ObservableTrait   
+A PHP 5.4+ trait which adds methods for firing and observing events to help decouple code and allow for event-driven programming.
+
+```php
+<?php
+require('gUtils/ObservableTrait');
+Class Dog {
+	use gUtils\ObservableTrait;
+	public $name;
+
+	public function __construct($name) {
+		$this->name = $name;
+	}
+
+	public function bark() {
+		echo "woof woof\n";
+		$this->fireEvent('barked', $this);
+	}
+
+	public function rollOver() {
+		echo '(' . $this->name . " rolls over)\n";
+		$this->fireEvent('didTrick', $this, 'roll over');
+	}
+}
+
+$fido = new Dog('Fido');
+$listeners = $fido->addListeners([
+	'barked' => function($dog) {
+		echo 'Shhh ' . $dog->name . "\n";
+	},
+	'didTrick' => function($dog, $trickName){
+		echo 'Good dog, ' . $dog->name . " - I love it when you {$trickName}\n";
+	}
+]);
+$fido->bark(); // listener called
+$fido->rollOver(); // listener called
+$fido->stopEvents();
+$fido->bark(); // no listener called
+$fido->resumeEvents();
+$fido->bark(); // listener called
+$fido->removeListener($listeners[0]);
+$fido->bark(); // no listener called
+$fido->rollOver(); // listener called
 ```
 
 ##PasswordHelper 
